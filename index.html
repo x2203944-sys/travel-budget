@@ -84,6 +84,16 @@ button{
     cursor:pointer;
 }
 
+button.secondary{
+    background:#eadcc8;
+    color:#6c4726;
+}
+
+button.recording{
+    background:#c44b35;
+    color:white;
+}
+
 .option-row{
     display:grid;
     grid-template-columns:1fr 1fr 1fr 1fr;
@@ -95,6 +105,11 @@ button{
     display:flex;
     gap:12px;
     margin-top:16px;
+    flex-wrap:wrap;
+}
+
+.action-row button{
+    width:auto;
 }
 
 .result-title{
@@ -120,6 +135,20 @@ button{
     font-size:18px;
     font-weight:700;
     margin-bottom:14px;
+}
+
+.title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.voice-status{
+    margin-top:10px;
+    font-size:14px;
+    color:#8b6b4d;
+    min-height:20px;
 }
 
 .ai-text{
@@ -149,6 +178,10 @@ button{
 }
 
 @media(max-width:900px){
+    body{
+        padding:22px;
+    }
+
     .main{
         grid-template-columns:1fr;
     }
@@ -159,6 +192,10 @@ button{
 
     .header h1{
         font-size:42px;
+    }
+
+    .action-row button{
+        width:100%;
     }
 }
 </style>
@@ -183,8 +220,13 @@ button{
 </div>
 
 <div>
+<div class="title-row">
 <div class="small-title">輸入原文</div>
+<button class="secondary" id="voiceBtn" onclick="toggleVoiceInput()">🎤 語音輸入</button>
+</div>
+
 <textarea id="inputText" placeholder="例如：這樣會不會太麻煩你？"></textarea>
+<div class="voice-status" id="voiceStatus">語音輸入會直接填入這一欄，再按 AI 翻譯即可。</div>
 </div>
 
 <div class="option-row">
@@ -205,13 +247,17 @@ button{
 <option value="口語">口語</option>
 </select>
 
-<select>
-<option>gpt-4.1-mini</option>
+<select id="speechLanguage">
+<option value="zh-TW">語音：中文</option>
+<option value="en-US">語音：英文</option>
+<option value="ja-JP">語音：日文</option>
 </select>
 </div>
 
 <div class="action-row">
 <button onclick="translateText()">AI 翻譯</button>
+<button class="secondary" onclick="swapToChinese()">對方說話 → 翻成中文</button>
+<button class="secondary" onclick="clearText()">清空</button>
 </div>
 
 <div class="notice">
@@ -242,6 +288,9 @@ button{
 
 <script>
 
+let recognition = null;
+let isRecording = false;
+
 function saveKey(){
     const key = document.getElementById("apiKey").value;
     localStorage.setItem("openai_api_key", key);
@@ -254,6 +303,7 @@ window.onload = () => {
         document.getElementById("apiKey").value = savedKey;
     }
     updateTranslateTitle();
+    setupSpeechRecognition();
 };
 
 function updateTranslateTitle(){
@@ -269,6 +319,90 @@ function updateTranslateTitle(){
     }
 }
 
+function setupSpeechRecognition(){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+        document.getElementById("voiceStatus").innerText = "此瀏覽器不支援語音輸入，建議使用 Chrome。";
+        document.getElementById("voiceBtn").disabled = true;
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+        isRecording = true;
+        const btn = document.getElementById("voiceBtn");
+        btn.innerText = "🛑 停止語音";
+        btn.classList.add("recording");
+        document.getElementById("voiceStatus").innerText = "正在聆聽中，請對著麥克風說話...";
+    };
+
+    recognition.onresult = (event) => {
+        let finalText = "";
+        let interimText = "";
+
+        for(let i = event.resultIndex; i < event.results.length; i++){
+            const transcript = event.results[i][0].transcript;
+            if(event.results[i].isFinal){
+                finalText += transcript;
+            }else{
+                interimText += transcript;
+            }
+        }
+
+        if(finalText){
+            document.getElementById("inputText").value = finalText.trim();
+        }else if(interimText){
+            document.getElementById("inputText").value = interimText.trim();
+        }
+    };
+
+    recognition.onerror = (event) => {
+        document.getElementById("voiceStatus").innerText = "語音輸入錯誤：" + event.error;
+    };
+
+    recognition.onend = () => {
+        isRecording = false;
+        const btn = document.getElementById("voiceBtn");
+        btn.innerText = "🎤 語音輸入";
+        btn.classList.remove("recording");
+        document.getElementById("voiceStatus").innerText = "語音輸入完成，可以按 AI 翻譯。";
+    };
+}
+
+function toggleVoiceInput(){
+    if(!recognition){
+        setupSpeechRecognition();
+    }
+
+    if(!recognition){
+        return;
+    }
+
+    if(isRecording){
+        recognition.stop();
+        return;
+    }
+
+    recognition.lang = document.getElementById("speechLanguage").value;
+    recognition.start();
+}
+
+function swapToChinese(){
+    document.getElementById("targetLanguage").value = "Traditional Chinese";
+    updateTranslateTitle();
+}
+
+function clearText(){
+    document.getElementById("inputText").value = "";
+    document.getElementById("aiUnderstanding").innerText = "尚未翻譯";
+    document.getElementById("translationResult").innerText = "尚未翻譯";
+    document.getElementById("voiceStatus").innerText = "語音輸入會直接填入這一欄，再按 AI 翻譯即可。";
+}
+
 async function translateText(){
 
     const apiKey = document.getElementById("apiKey").value;
@@ -277,6 +411,16 @@ async function translateText(){
     const tone = document.getElementById("tone").value;
 
     updateTranslateTitle();
+
+    if(!apiKey){
+        alert("請先輸入 OpenAI API Key");
+        return;
+    }
+
+    if(!text.trim()){
+        alert("請先輸入或語音輸入要翻譯的內容");
+        return;
+    }
 
     const prompt = `
 你是一個專業翻譯助手。
