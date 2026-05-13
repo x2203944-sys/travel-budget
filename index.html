@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旅遊預算</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f0;--card:#ffffff;--text:#1c1c1a;--muted:#888785;
+  --border:rgba(0,0,0,.1);--radius:14px;--radius-sm:8px;
+  --green:#0f6e56;--greenbg:#e1f5ee;--greendark:#084f3c;
+  --red:#c0392b;--redbg:#fdecea;
+  --shadow:0 2px 12px rgba(0,0,0,.06);
+}
+body{background:var(--bg);color:var(--text);font-family:"Noto Sans TC",sans-serif;padding:24px 16px 80px;max-width:860px;margin:0 auto;font-size:14px}
+
+/* header */
+.page-header{margin-bottom:20px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.trip-name-input{font-size:15px;font-weight:500;border:none;border-bottom:1.5px solid var(--border);border-radius:0;padding:2px 4px;background:transparent;color:var(--text);margin-top:4px;width:240px}
+.trip-name-input:focus{outline:none;border-bottom-color:var(--green)}
+
+/* save controls */
+.save-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;box-shadow:var(--shadow);flex-wrap:wrap}
+.save-note{font-size:12px;color:var(--muted)}
+.save-actions{display:flex;gap:8px;flex-wrap:wrap}
+.light-btn{padding:7px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap}
+.light-btn:hover{border-color:var(--green);color:var(--green)}
+
+/* budget top */
+.budget-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.rate-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.rate-row input{width:72px;padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit}
+.currency-grid{display:grid;grid-template-columns:1fr 28px 1fr;gap:8px;align-items:center}
+.cbox{background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px}
+.cbox label{font-size:11px;color:var(--muted);display:block;margin-bottom:5px;font-weight:500;letter-spacing:.4px}
+.cbox input{width:100%;font-size:22px;font-weight:700;background:transparent;border:none;color:var(--text);font-family:inherit}
+.cbox input:focus{outline:none}
+.eq{text-align:center;font-size:18px;color:var(--muted);font-weight:300}
+
+/* tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px}
+.tab{padding:9px 18px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:99px;font-family:inherit;transition:all .15s}
+.tab.active{background:var(--text);color:#fff;border-color:var(--text)}
+.tab:hover:not(.active){color:var(--text)}
+.panel{display:none}.panel.active{display:block}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.metric{background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px 14px}
+.metric-label{font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.metric-val{font-size:18px;font-weight:700}
+.metric-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.red{color:var(--red)}.green{color:var(--green)}
+
+/* progress */
+.prog-bg{background:var(--bg);border-radius:99px;height:6px;overflow:hidden;flex:2;margin:0 10px}
+.prog-fill{height:6px;border-radius:99px;transition:width .3s}
+.cat-row{display:flex;align-items:center;gap:6px;margin-bottom:9px;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cat-name{flex:1}
+.cat-num{min-width:140px;text-align:right;color:var(--muted);font-size:12px}
+
+/* table */
+.tbl-wrap{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:9px 12px;font-size:11px;font-weight:700;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--border);letter-spacing:.4px}
+td{padding:9px 12px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:500}
+.del{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px 5px;font-size:15px;line-height:1}
+.del:hover{color:var(--red)}
+
+/* add row */
+.add-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);flex-wrap:wrap;background:var(--bg)}
+.add-row input,.add-row select{flex:1;min-width:70px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:#fff}
+.add-row button,.add-btn{padding:7px 14px;background:var(--text);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap}
+.add-row button:hover{background:var(--green)}
+
+/* daily */
+.day-block{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+.day-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--bg);border-bottom:1px solid var(--border)}
+.day-hd-left{font-size:14px;font-weight:700}
+.day-hd-right{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px}
+.day-total-highlight{font-weight:700;color:var(--text)}
+.day-exp-row{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.day-exp-row:last-of-type{border-bottom:none}
+.day-exp-name{flex:1}
+.jpy{font-weight:700;min-width:80px;text-align:right}
+.twd{font-size:12px;color:var(--muted);min-width:80px;text-align:right}
+.add-day-exp{display:flex;gap:8px;padding:9px 12px;border-top:1px solid var(--border);flex-wrap:wrap;background:var(--bg)}
+.add-day-exp input,.add-day-exp select{flex:1;min-width:60px;padding:6px 9px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:#fff}
+.new-day-row{display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap}
+.new-day-row input,.new-day-row select{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:#fff}
+.day-title-edit{font-size:14px;font-weight:700;border:none;border-bottom:1px solid transparent;background:transparent;color:var(--text);font-family:inherit;padding:2px 4px;min-width:150px}
+.day-title-edit:focus{outline:none;border-bottom-color:var(--green);background:#fff}
+.day-toggle{padding:5px 9px;background:#fff;border:1px solid var(--border);border-radius:99px;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.day-toggle:hover{border-color:var(--green);color:var(--green)}
+.day-body.collapsed{display:none}
+.day-count{font-size:12px;color:var(--muted);margin-left:6px;font-weight:400}
+.photo-input{max-width:130px;font-size:12px}
+.photo-thumb{width:42px;height:42px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;flex-shrink:0}
+.photo-link{font-size:12px;color:var(--green);text-decoration:none;white-space:nowrap}
+
+
+/* mobile fixes */
+.day-hd{gap:10px}
+.day-hd-left{flex:1;min-width:0}
+.day-hd-right{flex-shrink:0}
+.photo-file{display:none}
+.photo-btn{padding:8px 12px;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap}
+.photo-btn:hover{border-color:var(--green);color:var(--green)}
+.photo-view-btn{background:none;border:none;padding:0;cursor:pointer}
+.photo-modal{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}
+.photo-modal.show{display:flex}
+.photo-modal img{max-width:100%;max-height:86vh;border-radius:12px;background:#fff}
+.photo-modal-close{position:fixed;right:18px;top:18px;background:#fff;border:none;border-radius:999px;padding:9px 12px;font-size:16px;cursor:pointer}
+
+@media(max-width:600px){
+  body{padding:18px 14px 90px;max-width:100%;overflow-x:hidden}
+  .day-hd{align-items:flex-start;padding:14px 14px;gap:8px}
+  .day-hd-left{display:flex;flex-direction:column;gap:4px}
+  .day-hd-right{display:grid;grid-template-columns:1fr auto;gap:4px 8px;align-items:center;text-align:right;min-width:108px}
+  .day-hd-right .day-total-highlight{grid-column:1 / 3;font-size:16px;text-align:right}
+  .day-hd-right span:not(.day-total-highlight){font-size:11px}
+  .day-toggle{grid-column:1 / 2;justify-self:end;padding:5px 10px}
+  .day-hd-right .del{grid-column:2 / 3;justify-self:end}
+  .day-title-edit{min-width:0;width:100%;max-width:180px}
+  .day-exp-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:7px 8px;align-items:center}
+  .day-exp-name{min-width:0;word-break:break-word}
+  .jpy{min-width:62px;text-align:right}
+  .twd{grid-column:3 / 4;min-width:62px;text-align:right;font-size:11px}
+  .photo-thumb{width:38px;height:38px}
+  .add-day-exp{display:grid;grid-template-columns:1fr 108px;gap:8px}
+  .add-day-exp input,.add-day-exp select,.add-day-exp button,.photo-btn{width:100%;max-width:none;min-width:0}
+  .add-day-exp input[id^="dn"]{grid-column:1 / 3}
+}
+
+@media(max-width:600px){
+  .metrics{grid-template-columns:1fr 1fr}
+  .currency-grid{grid-template-columns:1fr 20px 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">旅遊預算</div>
+  <input class="trip-name-input" id="tripName" value="" placeholder="旅行名稱" oninput="saveData()">
+</div>
+
+<div class="save-bar">
+  <div class="save-note" id="saveStatus">乾淨版：資料會自動儲存在這台瀏覽器</div>
+  <div class="save-actions">
+    <button class="light-btn" onclick="manualSave()">立即儲存</button>
+    <button class="light-btn" onclick="exportData()">匯出備份</button>
+    <button class="light-btn" onclick="document.getElementById('importFile').click()">匯入備份</button>
+    <button class="light-btn" onclick="resetData()">清除資料</button>
+    <input id="importFile" type="file" accept="application/json" style="display:none" onchange="importData(event)">
+  </div>
+</div>
+
+<!-- 預算 & 匯率 -->
+<div class="budget-card">
+  <div class="rate-row">
+    <span>匯率</span>
+    <span style="font-weight:700;color:var(--text)">1 JPY</span>
+    <span>=</span>
+    <input id="rate" type="number" value="0.22" step="0.001" oninput="onRateChange()">
+    <span style="font-weight:700;color:var(--text)">TWD</span>
+    <span style="margin-left:6px;font-size:12px">（可手動修改）</span>
+  </div>
+  <div class="currency-grid">
+    <div class="cbox">
+      <label>總預算 TWD</label>
+      <input id="budgetTWD" type="number" value="30000" oninput="onTWDChange()">
+    </div>
+    <div class="eq">=</div>
+    <div class="cbox">
+      <label>總預算 JPY</label>
+      <input id="budgetJPY" type="number" value="136364" oninput="onJPYChange()">
+    </div>
+  </div>
+</div>
+
+<!-- tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview',this)">總覽</button>
+  <button class="tab" onclick="switchTab('daily',this)">每日明細</button>
+</div>
+
+<!-- 總覽 -->
+<div id="overview" class="panel active">
+  <div class="metrics" id="metricCards"></div>
+  <div id="catBreakdown" style="margin-bottom:16px"></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>項目</th><th>類別</th><th>日幣 JPY</th><th>台幣 TWD</th><th></th></tr>
+      </thead>
+      <tbody id="expRows"></tbody>
+    </table>
+    <div class="add-row">
+      <input id="eName" placeholder="項目名稱（例：來回機票）" style="min-width:120px">
+      <select id="eCat">
+        <option>機票</option><option>住宿</option><option>餐飲</option>
+        <option>交通</option><option>景點</option><option>玩樂</option>
+        <option>購物</option><option>其他</option>
+      </select>
+      <input id="eJPY" type="number" placeholder="日幣金額" style="max-width:110px">
+      <span style="font-size:12px;color:var(--muted);align-self:center">或</span>
+      <input id="eTWD" type="number" placeholder="台幣金額" style="max-width:110px">
+      <button onclick="addExpense()">+ 新增</button>
+    </div>
+  </div>
+  <p style="font-size:11px;color:var(--muted);margin-top:8px;padding:0 4px">
+    ＊填日幣或台幣其中一個即可；新增後會自動換算並同步至每日明細可選用
+  </p>
+</div>
+
+<!-- 每日明細 -->
+<div id="daily" class="panel">
+  <div id="dayList"></div>
+  <div class="new-day-row">
+    <select id="insertDayIndex" title="選擇新增到哪個 Day 位置"></select>
+    <button class="add-btn" onclick="addDay()">+ 新增一天</button>
+  </div>
+  <p style="font-size:11px;color:var(--muted);margin-top:8px;padding:0 4px">
+    ＊可選擇插入 Day 幾；插入後，後面的 Day 會自動往後遞延。
+  </p>
+</div>
+
+
+<div id="photoModal" class="photo-modal" onclick="closePhotoModal()">
+  <button class="photo-modal-close" onclick="closePhotoModal()">✕</button>
+  <img id="photoModalImg" alt="收據照片">
+</div>
+
+<script>
+// ── 資料 ── 全部統一用 JPY 儲存，TWD 僅換算顯示
+const catColors={
+  機票:"#378ADD",住宿:"#1D9E75",餐飲:"#BA7517",
+  交通:"#7F77DD",景點:"#D4537E",玩樂:"#0f6e56",
+  購物:"#E24B4A",其他:"#888780"
+};
+
+// 核心修正：總覽與每日明細改成同一份資料 expenses
+// 每筆支出都可以選擇 dayIndex；dayIndex:null 代表尚未分配到某一天
+let nextId=100;
+let days=[];
+let expenses=[];
+
+let collapsedDays={};
+const STORAGE_KEY='travelBudgetApp_clean_mobile_v3';
+let hasLoadedSavedData=false;
+let saveTimer=null;
+
+function collectState(){
+  return {
+    version:2,
+    savedAt:new Date().toISOString(),
+    tripName:document.getElementById('tripName')?.value||'',
+    rate:document.getElementById('rate')?.value||'0.22',
+    budgetTWD:document.getElementById('budgetTWD')?.value||'',
+    budgetJPY:document.getElementById('budgetJPY')?.value||'',
+    nextId,
+    days,
+    expenses,
+    collapsedDays
+  };
+}
+function setSaveStatus(text){
+  const el=document.getElementById('saveStatus');
+  if(el) el.textContent=text;
+}
+function saveData(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(collectState()));
+      setSaveStatus('已自動儲存：'+new Date().toLocaleString('zh-TW',{hour12:false}));
+    }catch(err){
+      setSaveStatus('儲存失敗：瀏覽器可能封鎖 localStorage');
+      console.error(err);
+    }
+  },150);
+}
+function manualSave(){
+  clearTimeout(saveTimer);
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(collectState()));
+    setSaveStatus('已手動儲存：'+new Date().toLocaleString('zh-TW',{hour12:false}));
+  }catch(err){
+    alert('儲存失敗：瀏覽器可能封鎖 localStorage');
+  }
+}
+function loadData(){
+  try{
+    let raw=localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const data=JSON.parse(raw);
+    if(!data || !Array.isArray(data.days) || !Array.isArray(data.expenses)) return;
+    document.getElementById('tripName').value=data.tripName||'旅遊預算';
+    document.getElementById('rate').value=data.rate||'0.22';
+    document.getElementById('budgetTWD').value=data.budgetTWD||'';
+    document.getElementById('budgetJPY').value=data.budgetJPY||'';
+    nextId=Number(data.nextId)||100;
+    days=data.days;
+    expenses=data.expenses;
+    collapsedDays=data.collapsedDays||{};
+    hasLoadedSavedData=true;
+    setSaveStatus('已載入上次儲存資料');
+  }catch(err){
+    setSaveStatus('讀取儲存資料失敗');
+    console.error(err);
+  }
+}
+function exportData(){
+  const data=JSON.stringify(collectState(),null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const safeName=(document.getElementById('tripName').value||'travel-budget').replace(/[\/:*?"<>|]/g,'-');
+  a.href=url;
+  a.download=safeName+'-備份.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(event){
+  const file=event.target.files?.[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!Array.isArray(data.days)||!Array.isArray(data.expenses)) throw new Error('格式不正確');
+      document.getElementById('tripName').value=data.tripName||'旅遊預算';
+      document.getElementById('rate').value=data.rate||'0.22';
+      document.getElementById('budgetTWD').value=data.budgetTWD||'';
+      document.getElementById('budgetJPY').value=data.budgetJPY||'';
+      nextId=Number(data.nextId)||100;
+      days=data.days;
+      expenses=data.expenses;
+      collapsedDays=data.collapsedDays||{};
+      manualSave();
+      renderAll(false);
+      alert('匯入完成');
+    }catch(err){
+      alert('匯入失敗，檔案格式不正確');
+    }
+    event.target.value='';
+  };
+  reader.readAsText(file);
+}
+function resetData(){
+  if(!confirm('確定要清除這台瀏覽器已儲存的旅遊預算資料嗎？')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function getRate(){return parseFloat(document.getElementById('rate').value)||0.22}
+function jpyToTwd(jpy){return Math.round(jpy*getRate())}
+function twdToJpy(twd){return Math.round(twd/getRate())}
+function getBudgetJPY(){return parseFloat(document.getElementById('budgetJPY').value)||0}
+
+function onRateChange(){
+  const twd=parseFloat(document.getElementById('budgetTWD').value)||0;
+  document.getElementById('budgetJPY').value=Math.round(twd/getRate());
+  renderAll();
+}
+function onTWDChange(){
+  const twd=parseFloat(document.getElementById('budgetTWD').value)||0;
+  document.getElementById('budgetJPY').value=Math.round(twd/getRate());
+  renderAll();
+}
+function onJPYChange(){
+  const jpy=parseFloat(document.getElementById('budgetJPY').value)||0;
+  document.getElementById('budgetTWD').value=Math.round(jpy*getRate());
+  renderAll();
+}
+
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  renderAll();
+}
+
+function renderAll(shouldSave=true){renderOverview();renderDaily();if(shouldSave) saveData();}
+
+function getSpentJPY(){return expenses.reduce((s,e)=>s+Number(e.jpy||0),0)}
+function escapeHTML(str){
+  return String(str??'').replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]));
+}
+function cleanDayName(name){
+  return String(name||'').replace(/^Day\s*\d+\s*[·．.、-]?\s*/i,'').trim();
+}
+function getDayName(dayIndex){
+  if(dayIndex===null||dayIndex===undefined) return '未分配';
+  const extra=cleanDayName(days[dayIndex]?.name);
+  return days[dayIndex] ? `Day ${dayIndex+1}${extra?' · '+extra:''}` : '未分配';
+}
+function getDayOptions(selected=null){
+  let html=`<option value="">未分配</option>`;
+  html+=days.map((d,i)=>`<option value="${i}" ${selected===i?'selected':''}>${getDayName(i)}</option>`).join('');
+  return html;
+}
+function renderInsertDayOptions(){
+  const el=document.getElementById('insertDayIndex');
+  if(!el) return;
+  let html=days.map((d,i)=>`<option value="${i}">新增為 Day ${i+1}</option>`).join('');
+  html+=`<option value="${days.length}" selected>新增為 Day ${days.length+1}（最後）</option>`;
+  el.innerHTML=html;
+}
+function updateDayName(di,value){
+  if(!days[di]) return;
+  days[di].name=value.trim();
+  renderOverview();
+  saveData();
+}
+
+// ── 總覽 ──
+function renderOverview(){
+  const budJPY=getBudgetJPY();
+  const spentJPY=getSpentJPY();
+  const remJPY=budJPY-spentJPY;
+  const pct=budJPY>0?Math.min(100,Math.round(spentJPY/budJPY*100)):0;
+
+  document.getElementById('metricCards').innerHTML=`
+    <div class="metric"><div class="metric-label">總預算</div>
+      <div class="metric-val">¥${budJPY.toLocaleString()}</div>
+      <div class="metric-sub">≈ NT$${Math.round(budJPY*getRate()).toLocaleString()}</div></div>
+    <div class="metric"><div class="metric-label">已記錄</div>
+      <div class="metric-val">¥${spentJPY.toLocaleString()}</div>
+      <div class="metric-sub">≈ NT$${jpyToTwd(spentJPY).toLocaleString()}</div></div>
+    <div class="metric"><div class="metric-label">剩餘</div>
+      <div class="metric-val ${remJPY<0?'red':'green'}">¥${remJPY.toLocaleString()}</div>
+      <div class="metric-sub">≈ NT$${Math.abs(jpyToTwd(remJPY)).toLocaleString()}${remJPY<0?' 超支':''}</div></div>
+    <div class="metric"><div class="metric-label">使用率</div>
+      <div class="metric-val ${pct>90?'red':pct>70?'':'green'}">${pct}%</div>
+      <div class="metric-sub">每日明細已同步計算</div></div>
+  `;
+
+  const bycat={};
+  expenses.forEach(e=>{bycat[e.cat]=(bycat[e.cat]||0)+Number(e.jpy||0);});
+  let html=`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-weight:700;letter-spacing:.4px">支出分類</div>`;
+  Object.entries(bycat).sort((a,b)=>b[1]-a[1]).forEach(([cat,jpy])=>{
+    const p=spentJPY>0?Math.round(jpy/spentJPY*100):0;
+    html+=`<div class="cat-row">
+      <div class="dot" style="background:${catColors[cat]||'#888'}"></div>
+      <span class="cat-name">${cat}</span>
+      <div class="prog-bg"><div class="prog-fill" style="width:${p}%;background:${catColors[cat]||'#888'}"></div></div>
+      <span class="cat-num">¥${jpy.toLocaleString()} ≈ NT$${jpyToTwd(jpy).toLocaleString()} (${p}%)</span>
+    </div>`;
+  });
+  document.getElementById('catBreakdown').innerHTML=html;
+
+  document.getElementById('expRows').innerHTML=expenses.map((e,i)=>`
+    <tr>
+      <td>${e.name}<div style="font-size:11px;color:var(--muted);margin-top:2px">${getDayName(e.dayIndex)}</div></td>
+      <td><span class="badge" style="background:${catColors[e.cat]||'#eee'}22;color:${catColors[e.cat]||'#888'}">${e.cat}</span></td>
+      <td style="font-weight:700">¥${Number(e.jpy||0).toLocaleString()}</td>
+      <td style="color:var(--muted)">NT$${jpyToTwd(e.jpy).toLocaleString()}</td>
+      <td><button class="del" onclick="removeExpense(${i})" title="刪除">✕</button></td>
+    </tr>
+  `).join('');
+
+  // 讓總覽新增列多一個「歸類到哪一天」欄位，但不破壞原版 HTML
+  const addRow=document.querySelector('.add-row');
+  if(addRow && !document.getElementById('eDay')){
+    const daySelect=document.createElement('select');
+    daySelect.id='eDay';
+    daySelect.style.maxWidth='160px';
+    daySelect.innerHTML=getDayOptions();
+    const btn=addRow.querySelector('button');
+    addRow.insertBefore(daySelect,btn);
+  }
+  if(document.getElementById('eDay')) document.getElementById('eDay').innerHTML=getDayOptions();
+}
+
+function addExpense(){
+  const n=document.getElementById('eName').value.trim();
+  const cat=document.getElementById('eCat').value;
+  const j=parseFloat(document.getElementById('eJPY').value);
+  const t=parseFloat(document.getElementById('eTWD').value);
+  const dayVal=document.getElementById('eDay')?.value;
+  if(!n) return;
+  let jpy=0;
+  if(j>0) jpy=j;
+  else if(t>0) jpy=twdToJpy(t);
+  else return;
+  expenses.push({id:nextId++,name:n,cat,jpy,dayIndex:dayVal===''?null:parseInt(dayVal)});
+  document.getElementById('eName').value='';
+  document.getElementById('eJPY').value='';
+  document.getElementById('eTWD').value='';
+  renderAll();
+}
+
+function removeExpense(i){expenses.splice(i,1);renderAll();}
+
+
+function getCollapseKey(di){return di===null?'unassigned':'day_'+di;}
+function toggleDay(di){
+  const key=getCollapseKey(di);
+  collapsedDays[key]=!collapsedDays[key];
+  renderDaily();
+  saveData();
+}
+function compressImageFile(file,maxSize=900,quality=0.72){
+  return new Promise((resolve,reject)=>{
+    if(!file) return resolve(null);
+    const reader=new FileReader();
+    reader.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const scale=Math.min(1,maxSize/Math.max(img.width,img.height));
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.round(img.width*scale);
+        canvas.height=Math.round(img.height*scale);
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=reject;
+      img.src=reader.result;
+    };
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+// ── 每日明細 ──
+function renderDaily(){
+  const budJPY=getBudgetJPY();
+  const spentJPY=getSpentJPY();
+  const remJPY=budJPY-spentJPY;
+  let html=`<div class="metrics" style="margin-bottom:12px">
+    <div class="metric"><div class="metric-label">總預算</div><div class="metric-val">¥${budJPY.toLocaleString()}</div><div class="metric-sub">≈ NT$${jpyToTwd(budJPY).toLocaleString()}</div></div>
+    <div class="metric"><div class="metric-label">全部已記錄</div><div class="metric-val">¥${spentJPY.toLocaleString()}</div><div class="metric-sub">≈ NT$${jpyToTwd(spentJPY).toLocaleString()}</div></div>
+    <div class="metric"><div class="metric-label">剩餘</div><div class="metric-val ${remJPY<0?'red':'green'}">¥${remJPY.toLocaleString()}</div><div class="metric-sub">≈ NT$${Math.abs(jpyToTwd(remJPY)).toLocaleString()}${remJPY<0?' 超支':''}</div></div>
+    <div class="metric"><div class="metric-label">未分配支出</div><div class="metric-val">¥${expenses.filter(e=>e.dayIndex===null||e.dayIndex===undefined).reduce((s,e)=>s+e.jpy,0).toLocaleString()}</div><div class="metric-sub">總覽新增但未選日期</div></div>
+  </div>`;
+
+  const unassigned=expenses.filter(e=>e.dayIndex===null||e.dayIndex===undefined);
+  if(unassigned.length){
+    const total=unassigned.reduce((s,e)=>s+e.jpy,0);
+    html+=renderDayBlock('未分配支出', unassigned, total, null);
+  }
+
+  days.forEach((d,di)=>{
+    const items=expenses.filter(e=>e.dayIndex===di);
+    const total=items.reduce((s,e)=>s+e.jpy,0);
+    html+=renderDayBlock(getDayName(di),items,total,di);
+  });
+  document.getElementById('dayList').innerHTML=html;
+  renderInsertDayOptions();
+}
+
+
+function openPhotoById(id){
+  const exp=expenses.find(e=>e.id===id);
+  if(!exp || !exp.photoData) return;
+  const modal=document.getElementById('photoModal');
+  const img=document.getElementById('photoModalImg');
+  img.src=exp.photoData;
+  modal.classList.add('show');
+}
+function closePhotoModal(){
+  const modal=document.getElementById('photoModal');
+  const img=document.getElementById('photoModalImg');
+  if(modal) modal.classList.remove('show');
+  if(img) img.removeAttribute('src');
+}
+
+function renderDayBlock(title,items,total,di){
+  const key=getCollapseKey(di);
+  const isCollapsed=!!collapsedDays[key];
+  const itemCount=items.length;
+  return`<div class="day-block">
+    <div class="day-hd">
+      <span class="day-hd-left">${di!==null?`Day ${di+1} · <input class="day-title-edit" value="${escapeHTML(cleanDayName(days[di]?.name))}" placeholder="輸入行程名稱" onchange="updateDayName(${di},this.value)" onblur="updateDayName(${di},this.value)">`:title}<span class="day-count">${itemCount} 筆</span></span>
+      <span class="day-hd-right">
+        <span class="day-total-highlight">¥${total.toLocaleString()}</span>
+        <span>≈ NT$${jpyToTwd(total).toLocaleString()}</span>
+        <button class="day-toggle" onclick="toggleDay(${di})">${isCollapsed?'展開':'收合'}</button>
+        ${di!==null?`<button class="del" onclick="removeDay(${di})" title="刪除此天">✕</button>`:''}
+      </span>
+    </div>
+    <div class="day-body ${isCollapsed?'collapsed':''}">
+      ${items.length===0?`<div style="padding:10px 14px;color:var(--muted);font-size:13px">尚未新增支出</div>`:''}
+      ${items.map(e=>`
+        <div class="day-exp-row">
+          <span class="badge" style="font-size:11px;background:${catColors[e.cat]||'#eee'}22;color:${catColors[e.cat]||'#888'}">${e.cat}</span>
+          <span class="day-exp-name">${escapeHTML(e.name)}</span>
+          <span class="jpy">¥${Number(e.jpy||0).toLocaleString()}</span>
+          <span class="twd">≈ NT$${jpyToTwd(e.jpy).toLocaleString()}</span>
+          ${e.photoData?`<button class="photo-view-btn" onclick="openPhotoById(${e.id})" title="查看照片"><img class="photo-thumb" src="${e.photoData}" alt="收據照片"></button>`:''}
+          <button class="del" onclick="removeExpenseById(${e.id})" title="刪除">✕</button>
+        </div>`).join('')}
+      ${di!==null?`<div class="add-day-exp">
+        <input id="dn${di}" placeholder="項目名稱">
+        <select id="dc${di}">
+          <option>餐飲</option><option>交通</option><option>景點</option>
+          <option>玩樂</option><option>購物</option><option>住宿</option>
+          <option>機票</option><option>其他</option>
+        </select>
+        <input id="dj${di}" type="number" placeholder="日幣" style="max-width:90px">
+        <input id="dt${di}" type="number" placeholder="台幣" style="max-width:90px">
+        <input id="photo${di}" class="photo-file" type="file" accept="image/*" capture="environment"><label class="photo-btn" for="photo${di}">拍照</label>
+        <button onclick="addDayItem(${di})">+ 新增</button>
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+async function addDayItem(di){
+  const n=document.getElementById('dn'+di).value.trim();
+  const cat=document.getElementById('dc'+di).value;
+  const j=parseFloat(document.getElementById('dj'+di).value);
+  const t=parseFloat(document.getElementById('dt'+di).value);
+  if(!n) return;
+  let jpy=0;
+  if(j>0) jpy=j;
+  else if(t>0) jpy=twdToJpy(t);
+  else return;
+  let photoData=null;
+  const photoFile=document.getElementById('photo'+di)?.files?.[0];
+  if(photoFile){
+    try{ photoData=await compressImageFile(photoFile); }catch(err){ alert('照片讀取失敗，會先新增文字金額'); }
+  }
+  expenses.push({id:nextId++,name:n,cat,jpy,dayIndex:di,photoData});
+  renderAll();
+}
+
+function removeExpenseById(id){
+  const i=expenses.findIndex(e=>e.id===id);
+  if(i>-1) removeExpense(i);
+}
+
+function removeDay(di){
+  if(!confirm('刪除此天後，這天的支出會改成「未分配」，後面的 Day 會自動往前遞補。確定嗎？')) return;
+  days.splice(di,1);
+  collapsedDays={};
+  expenses.forEach(e=>{
+    if(e.dayIndex===di) e.dayIndex=null;
+    else if(e.dayIndex>di) e.dayIndex--;
+  });
+  renderAll();
+}
+function addDay(){
+  const insertVal=document.getElementById('insertDayIndex')?.value;
+  let idx=Number.isFinite(parseInt(insertVal))?parseInt(insertVal):days.length;
+  idx=Math.max(0,Math.min(idx,days.length));
+  days.splice(idx,0,{name:''});
+  collapsedDays={};
+  expenses.forEach(e=>{
+    if(e.dayIndex!==null && e.dayIndex!==undefined && e.dayIndex>=idx) e.dayIndex++;
+  });
+  renderAll();
+}
+
+loadData();
+renderAll(!hasLoadedSavedData);
+</script>
+</body>
+</html>
