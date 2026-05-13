@@ -94,9 +94,16 @@ button.recording{
     color:white;
 }
 
+.swap-btn{
+    min-width:54px;
+    padding:14px 16px;
+    background:#eadcc8;
+    color:#6c4726;
+}
+
 .option-row{
     display:grid;
-    grid-template-columns:1fr 1fr 1fr 1fr;
+    grid-template-columns:1fr auto 1fr 1fr 1fr;
     gap:10px;
     margin-top:15px;
 }
@@ -187,7 +194,11 @@ button.recording{
     }
 
     .option-row{
-        grid-template-columns:1fr 1fr;
+        grid-template-columns:1fr auto 1fr;
+    }
+
+    #tone, #speechLanguage{
+        grid-column:span 3;
     }
 
     .header h1{
@@ -231,12 +242,16 @@ button.recording{
 
 <div class="option-row">
 <select id="sourceLanguage">
-<option>自動判斷原文</option>
+<option value="Traditional Chinese">中文</option>
+<option value="English">英文</option>
+<option value="Japanese">日文</option>
 </select>
+
+<button class="swap-btn" onclick="swapLanguages()" title="交換語言">⇄</button>
 
 <select id="targetLanguage" onchange="updateTranslateTitle()">
 <option value="English">翻成英文</option>
-<option value="Japanese">翻成日文</option>
+<option value="Japanese" selected>翻成日文</option>
 <option value="Traditional Chinese">翻成中文</option>
 </select>
 
@@ -256,13 +271,10 @@ button.recording{
 
 <div class="action-row">
 <button onclick="translateText()">AI 翻譯</button>
-<button class="secondary" onclick="swapToChinese()">對方說話 → 翻成中文</button>
 <button class="secondary" onclick="clearText()">清空</button>
 </div>
 
-<div class="notice">
-注意：這是個人測試版。API Key 放在前端仍可能被看見，不建議公開給別人使用。正式版應該改成後端代理，避免 Key 外洩。
-</div>
+
 
 </div>
 
@@ -317,6 +329,24 @@ function updateTranslateTitle(){
     }else{
         title.innerText = "翻譯";
     }
+}
+
+
+function swapLanguages(){
+    const source = document.getElementById("sourceLanguage");
+    const target = document.getElementById("targetLanguage");
+
+    const oldSource = source.value;
+    const oldTarget = target.value;
+
+    source.value = oldTarget;
+    target.value = oldSource;
+
+    updateTranslateTitle();
+
+    const sourceText = source.options[source.selectedIndex].text;
+    const targetText = target.options[target.selectedIndex].text.replace("翻成", "");
+    document.getElementById("voiceStatus").innerText = sourceText + " → " + targetText + "，已交換語言。";
 }
 
 function setupSpeechRecognition(){
@@ -391,10 +421,6 @@ function toggleVoiceInput(){
     recognition.start();
 }
 
-function swapToChinese(){
-    document.getElementById("targetLanguage").value = "Traditional Chinese";
-    updateTranslateTitle();
-}
 
 function clearText(){
     document.getElementById("inputText").value = "";
@@ -407,6 +433,7 @@ async function translateText(){
 
     const apiKey = document.getElementById("apiKey").value;
     const text = document.getElementById("inputText").value;
+    const sourceLanguage = document.getElementById("sourceLanguage").value;
     const targetLanguage = document.getElementById("targetLanguage").value;
     const tone = document.getElementById("tone").value;
 
@@ -424,6 +451,9 @@ async function translateText(){
 
     const prompt = `
 你是一個專業翻譯助手。
+
+原文語言是：${sourceLanguage}
+目標語言是：${targetLanguage}
 
 請先用繁體中文解釋這句話的語氣與含意。
 
